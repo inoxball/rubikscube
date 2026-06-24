@@ -1,7 +1,7 @@
 # 2x2 Rubik's Cube Solver (Q-learning)
 
 An AI that solves a scrambled 2x2x2 Rubik's Cube (Pocket Cube) on its own, with no human solutions or labelled data. A neural network is trained with **Q-learning** to score every possible move from a cube state, and a **weighted A\*** search uses those scores to find the actual solution.
-
+![Demo](scr.jpg)
 ## How it works
 
 - The cube is a `(6, 2, 2)` array and gets one-hot encoded into a 144-dim vector.
