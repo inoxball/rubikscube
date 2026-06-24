@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>2x2 Cube AI</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: #09090b;
+  color: #d4d4d8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+}
+
+#canvas-wrap { flex: 1; min-width: 0; position: relative; }
+#three-canvas { display: block; width: 100%; height: 100%; }
+
+.panel {
+  width: 268px;
+  min-width: 268px;
+  height: 100vh;
+  background: #0d0d10;
+  border-left: 1px solid #1d1d24;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.panel-header {
+  padding: 16px 16px 13px;
+  border-bottom: 1px solid #1d1d24;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.panel-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  color: #3f3f46;
+}
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.25s;
+}
+.dot.solved   { background: #22c55e; }
+.dot.unsolved { background: #ef4444; }
+#statusText { color: #71717a; }
+#moveCount  { color: #3f3f46; font-variant-numeric: tabular-nums; }
+
+.section {
+  padding: 13px 16px;
+  border-bottom: 1px solid #1d1d24;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.section-label {
+  font-size: 0.57rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #3f3f46;
+  margin-bottom: 1px;
+}
+
+.btn {
+  padding: 8px 10px;
+  border: 1px solid #1d1d24;
+  border-radius: 5px;
+  font-size: 0.81rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  background: #111114;
+  color: #71717a;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.btn:hover  { background: #18181e; border-color: #2a2a36; color: #d4d4d8; }
+.btn:active { opacity: 0.7; }
+
+.btn-accent {
+  background: #f97316;
+  color: #fff;
+  border-color: #f97316;
+  font-weight: 600;
+}
+.btn-accent:hover { background: #ea6a0a; border-color: #ea6a0a; color: #fff; }
+
+.btn-solve {
+  width: 100%;
+  padding: 10px;
+  background: #111114;
+  color: #d4d4d8;
+  border: 1px solid #2a2a36;
+  border-radius: 5px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.4px;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.btn-solve:hover  { background: #f97316; border-color: #f97316; color: #fff; }
+.btn-solve:active { opacity: 0.75; }
+
+.row { display: flex; gap: 5px; align-items: center; }
+.row .btn { flex: 1; }
+
+input[type=number] {
+  width: 50px;
+  min-width: 50px;
+  padding: 8px 4px;
+  background: #111114;
+  border: 1px solid #1d1d24;
+  border-radius: 5px;
+  color: #d4d4d8;
+  font-size: 0.84rem;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+}
+input[type=number]:focus { border-color: #f97316; }
+
+.move-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+.move-btn {
+  padding: 6px 2px;
+  border: 1px solid #18181e;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  background: #0f0f12;
+  color: #52525b;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  text-align: center;
+}
+.move-btn:hover  { background: #18181e; border-color: #2a2a36; color: #d4d4d8; }
+.move-btn:active { opacity: 0.7; }
+
+.speed-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: #3f3f46;
+}
+.speed-val { min-width: 36px; text-align: right; color: #52525b; }
+input[type=range] {
+  flex: 1;
+  accent-color: #f97316;
+  cursor: pointer;
+}
+
+.log-section {
+  flex: 1;
+  padding: 12px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.log {
+  flex: 1;
+  min-height: 60px;
+  background: #080809;
+  border: 1px solid #1a1a22;
+  border-radius: 5px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  font-size: 0.69rem;
+  line-height: 1.75;
+}
+.log p { margin: 0; }
+.log .ok  { color: #22c55e; }
+.log .err { color: #ef4444; }
+.log .inf { color: #3f3f46; }
+.log .mv  { color: #60a5fa; }
+.log .sol { color: #f97316; }
+</style>
+</head>
+<body>
+
+<div id="canvas-wrap">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<div class="panel">
+
+  <div class="panel-header">
+    <span class="panel-title">2x2 Cube AI</span>
+    <div class="header-status">
+      <div class="dot unsolved" id="statusDot"></div>
+      <span id="statusText">–</span>
+      <span id="moveCount"></span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Control</div>
+    <div class="row">
+      <input type="number" id="scrambleN" value="5" min="1">
+      <button class="btn btn-accent" onclick="doScramble()">Scramble</button>
+      <button class="btn" onclick="doReset()">Reset</button>
+    </div>
+    <button class="btn-solve" onclick="doSolve()">▶&thinsp; AI Solve</button>
+    <div class="speed-row">
+      <span>Speed</span>
+      <input type="range" id="solveSpeed" min="60" max="700" value="300" step="10">
+      <span class="speed-val" id="speedLabel">300ms</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Moves</div>
+    <div class="move-grid" id="moveGrid"></div>
+    <button class="btn" style="width:100%;margin-top:1px" onclick="doUndo()">↩ Undo</button>
+  </div>
+
+  <div class="log-section">
+    <div class="section-label">Log</div>
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+
+const FACE_COLORS = [0xf5f5f5, 0xffd200, 0xff6b1a, 0xcc1111, 0x00a020, 0x1555cc]
+
+const MOVE_NAMES = ['U',"U'","U2",'D',"D'","D2",'R',"R'","R2",'L',"L'","L2",'F',"F'","F2",'B',"B'","B2"]
+
+const PANEL_W = 268
+
+const MOVE_ROT = [
+  {ax:[0,1,0], angle:-Math.PI/2},
+  {ax:[0,1,0], angle:Math.PI/2},
+  {ax:[0,1,0], angle:Math.PI},
+  {ax:[0,1,0], angle:Math.PI/2},
+  {ax:[0,1,0], angle:-Math.PI/2},
+  {ax:[0,1,0], angle:Math.PI},
+  {ax:[1,0,0], angle:-Math.PI/2},
+  {ax:[1,0,0], angle:Math.PI/2},
+  {ax:[1,0,0], angle:Math.PI},
+  {ax:[1,0,0], angle:Math.PI/2},
+  {ax:[1,0,0], angle:-Math.PI/2},
+  {ax:[1,0,0], angle:Math.PI},
+  {ax:[0,0,1], angle:-Math.PI/2},
+  {ax:[0,0,1], angle:Math.PI/2},
+  {ax:[0,0,1], angle:Math.PI},
+  {ax:[0,0,1], angle:Math.PI/2},
+  {ax:[0,0,1], angle:-Math.PI/2},
+  {ax:[0,0,1], angle:Math.PI},
+]
+
+const MOVE_NAME_TO_IDX = {}
+MOVE_NAMES.forEach((n, i) => MOVE_NAME_TO_IDX[n] = i)
+
+const canvas = document.getElementById('three-canvas')
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+renderer.setPixelRatio(window.devicePixelRatio)
+renderer.setClearColor(0x09090b, 1)
+
+const scene = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100)
+camera.position.set(5.2, 3.8, 5.2)
+camera.lookAt(0, 0, 0)
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement)
+controls.enableDamping = true
+controls.dampingFactor = 0.07
+controls.minDistance = 4
+controls.maxDistance = 14
+
+function resize() {
+  const w = window.innerWidth - PANEL_W
+  const h = window.innerHeight
+  renderer.setSize(w, h)
+  camera.aspect = w / h
+  camera.updateProjectionMatrix()
+}
+resize()
+window.addEventListener('resize', resize)
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.85))
+const sun = new THREE.DirectionalLight(0xffffff, 0.55)
+sun.position.set(6, 10, 6)
+scene.add(sun)
+const fill = new THREE.DirectionalLight(0x7799ff, 0.18)
+fill.position.set(-5, -4, -5)
+scene.add(fill)
+
+const cubeGroup = new THREE.Group()
+scene.add(cubeGroup)
+
+const CUBIE_SIZE = 1.38
+const CUBIE_OFF = 0.715
+
+const cubies = []
+const cubieMats = []
+
+const cubiePositions = [
+  [-1,-1,-1], [-1,-1,1], [-1,1,-1], [-1,1,1],
+  [1,-1,-1],  [1,-1,1],  [1,1,-1],  [1,1,1]
+]
+
+for (let i = 0; i < 8; i++) {
+  const mats = []
+  for (let j = 0; j < 6; j++) {
+    mats.push(new THREE.MeshStandardMaterial({ color: 0x111115, roughness: 0.4, metalness: 0.05 }))
+  }
+  cubieMats.push(mats)
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(CUBIE_SIZE, CUBIE_SIZE, CUBIE_SIZE), mats)
+  const p = cubiePositions[i]
+  mesh.position.set(p[0] * CUBIE_OFF, p[1] * CUBIE_OFF, p[2] * CUBIE_OFF)
+  cubeGroup.add(mesh)
+  cubies.push(mesh)
+}
+
+const stickerToMat = [
+  [[{c:2,m:2},{c:6,m:2}],[{c:3,m:2},{c:7,m:2}]],
+  [[{c:1,m:3},{c:5,m:3}],[{c:0,m:3},{c:4,m:3}]],
+  [[{c:2,m:1},{c:3,m:1}],[{c:0,m:1},{c:1,m:1}]],
+  [[{c:7,m:0},{c:6,m:0}],[{c:5,m:0},{c:4,m:0}]],
+  [[{c:3,m:4},{c:7,m:4}],[{c:1,m:4},{c:5,m:4}]],
+  [[{c:6,m:5},{c:2,m:5}],[{c:4,m:5},{c:0,m:5}]],
+]
+
+function getMoveCubies(mi) {
+  if (mi < 3)  return [cubies[2], cubies[3], cubies[6], cubies[7]]
+  if (mi < 6)  return [cubies[0], cubies[1], cubies[4], cubies[5]]
+  if (mi < 9)  return [cubies[4], cubies[5], cubies[6], cubies[7]]
+  if (mi < 12) return [cubies[0], cubies[1], cubies[2], cubies[3]]
+  if (mi < 15) return [cubies[1], cubies[3], cubies[5], cubies[7]]
+  return [cubies[0], cubies[2], cubies[4], cubies[6]]
+}
+
+function animateMove(mi, finalState, ms) {
+  return new Promise(function(resolve) {
+    const rot = MOVE_ROT[mi]
+    const meshes = getMoveCubies(mi)
+    const origPos = meshes.map(m => m.position.clone())
+    const axis = new THREE.Vector3(rot.ax[0], rot.ax[1], rot.ax[2])
+    const deltaQ = new THREE.Quaternion()
+    const t0 = performance.now()
+
+    function tick(now) {
+      const t = Math.min((now - t0) / ms, 1)
+      const ease = t * (2 - t)
+      deltaQ.setFromAxisAngle(axis, rot.angle * ease)
+      for (let i = 0; i < meshes.length; i++) {
+        meshes[i].position.copy(origPos[i]).applyQuaternion(deltaQ)
+        meshes[i].quaternion.copy(deltaQ)
+      }
+      if (t < 1) {
+        requestAnimationFrame(tick)
+      } else {
+        for (let i = 0; i < meshes.length; i++) {
+          meshes[i].position.copy(origPos[i])
+          meshes[i].quaternion.set(0, 0, 0, 1)
+        }
+        renderState(finalState)
+        resolve()
+      }
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+let moveHistory = []
+let moveCount = 0
+let busy = false
+
+function renderState(state) {
+  for (let f = 0; f < 6; f++) {
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 2; c++) {
+        const entry = stickerToMat[f][r][c]
+        cubieMats[entry.c][entry.m].color.setHex(FACE_COLORS[state[f][r][c]])
+      }
+    }
+  }
+  updateStatus(state)
+}
+
+function isSolved(state) {
+  for (let f = 0; f < 6; f++) {
+    const v = state[f][0][0]
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 2; c++) {
+        if (state[f][r][c] !== v) return false
+      }
+    }
+  }
+  return true
+}
+
+function updateStatus(state) {
+  const ok = isSolved(state)
+  document.getElementById('statusDot').className = 'dot ' + (ok ? 'solved' : 'unsolved')
+  document.getElementById('statusText').textContent = ok ? 'Solved' : 'Unsolved'
+  document.getElementById('moveCount').textContent = moveCount > 0 ? moveCount + ' mv' : ''
+}
+
+let animQueue = []
+
+function getDelay() {
+  return parseInt(document.getElementById('solveSpeed').value)
+}
+
+async function drainQueue() {
+  if (!animQueue.length) {
+    busy = false
+    return
+  }
+  const item = animQueue.shift()
+  await animateMove(item.mi, item.state, getDelay())
+  log('→ ' + item.name, 'mv')
+  drainQueue()
+}
+
+function queueMoves(steps) {
+  animQueue = []
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i]
+    animQueue.push({
+      state: s.state,
+      name: s.move_name,
+      mi: s.move_idx !== undefined ? s.move_idx : MOVE_NAME_TO_IDX[s.move_name]
+    })
+  }
+  busy = true
+  drainQueue()
+}
+
+async function fetchState() {
+  const d = await (await fetch('/state')).json()
+  renderState(d.state)
+}
+
+window.doScramble = async () => {
+  if (busy) return
+  busy = true
+  animQueue = []
+  const n = parseInt(document.getElementById('scrambleN').value)
+  let d
+  try {
+    d = await (await fetch('/scramble', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ n }),
+    })).json()
+  } catch(e) {
+    log('Server error', 'err')
+    busy = false
+    return
+  }
+  moveHistory = []
+  moveCount = 0
+  for (const step of d.steps) {
+    await animateMove(MOVE_NAME_TO_IDX[step.move_name], step.state, 120)
+  }
+  busy = false
+  log('Scrambled (' + n + '): ' + d.moves.join(' '), 'inf')
+}
+
+window.doReset = async () => {
+  if (busy) return
+  animQueue = []
+  const d = await (await fetch('/reset', { method: 'POST' })).json()
+  moveHistory = []
+  moveCount = 0
+  renderState(d.state)
+  log('Reset', 'inf')
+}
+
+window.doMove = async (idx) => {
+  if (busy) return
+  busy = true
+  const d = await (await fetch('/move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ move: idx }),
+  })).json()
+  moveHistory.push(idx)
+  moveCount++
+  await animateMove(idx, d.state, 150)
+  busy = false
+  if (d.solved) log('Solved!', 'ok')
+}
+
+window.doUndo = async () => {
+  if (!moveHistory.length) {
+    log('Nothing to undo', 'inf')
+    return
+  }
+  if (busy) return
+  busy = true
+  const INV = [1,0,2,4,3,5,7,6,8,10,9,11,13,12,14,16,15,17]
+  const last = moveHistory.pop()
+  const inv = INV[last]
+  const d = await (await fetch('/move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ move: inv }),
+  })).json()
+  moveCount = Math.max(0, moveCount - 1)
+  await animateMove(inv, d.state, 150)
+  busy = false
+  log('Undo ' + MOVE_NAMES[last], 'inf')
+}
+
+window.doSolve = async () => {
+  if (busy) return
+  log('Thinking...', 'inf')
+  let d
+  try {
+    d = await (await fetch('/solve', { method: 'POST' })).json()
+  } catch(e) {
+    log('Server error', 'err')
+    return
+  }
+  if (d.error) { log(d.error, 'err'); return }
+  if (!d.solution.length) { log('Already solved', 'ok'); return }
+  log('Solution: ' + d.solution.length + ' moves', 'sol')
+  queueMoves(d.solution)
+}
+
+document.getElementById('solveSpeed').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + 'ms'
+})
+
+const grid = document.getElementById('moveGrid')
+for (let i = 0; i < MOVE_NAMES.length; i++) {
+  const b = document.createElement('button')
+  b.className = 'move-btn'
+  b.textContent = MOVE_NAMES[i]
+  b.onclick = (function(idx) { return function() { doMove(idx) } })(i)
+  grid.appendChild(b)
+}
+
+function log(msg, cls) {
+  if (!cls) cls = 'inf'
+  const el = document.getElementById('log')
+  const p = document.createElement('p')
+  p.className = cls
+  p.textContent = msg
+  el.appendChild(p)
+  el.scrollTop = el.scrollHeight
+  while (el.children.length > 100) {
+    el.removeChild(el.firstChild)
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate)
+  controls.update()
+  renderer.render(scene, camera)
+}
+animate()
+
+window.addEventListener('load', function() {
+  const solvedState = []
+  for (let f = 0; f < 6; f++) {
+    solvedState.push([[f, f], [f, f]])
+  }
+  renderState(solvedState)
+  resize()
+  fetchState().catch(function() {
+    log('Start app.py to connect', 'err')
+    document.getElementById('statusText').textContent = 'offline'
+  })
+  log('Drag to rotate, scroll to zoom', 'inf')
+})
+
+</script>
+</body>
+</html>
